@@ -107,6 +107,25 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
+    // 5. Drop privileges to the original user
+    const real_gid = linux.getgid();
+    const real_uid = linux.getuid();
+
+    // setgid must be called before setuid (can't change gid after dropping root)
+    res = linux.setgid(real_gid);
+    errno = linux.E.init(res);
+    if (errno != .SUCCESS) {
+        std.debug.print("Error: setgid failed. (errno={s})\n", .{@tagName(errno)});
+        std.process.exit(1);
+    }
+
+    res = linux.setuid(real_uid);
+    errno = linux.E.init(res);
+    if (errno != .SUCCESS) {
+        std.debug.print("Error: setuid failed. (errno={s})\n", .{@tagName(errno)});
+        std.process.exit(1);
+    }
+
     const err = std.posix.execvpeZ(command.ptr, &argv_buf, std.c.environ);
     try stderr.writeAll("exec failed: ");
     try stderr.writeAll(command);
